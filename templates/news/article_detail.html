@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ article.title }}</h2>
+    <p><strong>Category:</strong> {{ article.category.name }}</p>
+    <p><strong>Published:</strong> {{ article.published_date }}</p>
+    <hr>
+    <p>{{ article.content }}</p>
+
+    {% if article.audio_file %}
+        <hr>
+        <audio controls>
+            <source src="{{ article.audio_file.url }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    {% endif %}
+
+    <a href="{{ article.source_url }}" target="_blank" class="btn btn-sm btn-secondary mt-3">🔗 Source</a>
+    <a href="{% url 'article_list' %}" class="btn btn-sm btn-link">← Back to Articles</a>
+</div>
+{% endblock %}

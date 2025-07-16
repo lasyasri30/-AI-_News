@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Welcome to NewsGenie AI 🌟</h2>
+<p>You are successfully logged in as <strong>{{ user.username }}</strong>.</p>
+
+
+<!-- 🔗 Add a button or link to view articles -->
+<p><a href="{% url 'article_list' %}" class="btn btn-primary">📰 Browse Latest Articles</a></p>
+{% endblock %}
