@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
 from .models import Article, Category
 
 def home(request):
@@ -15,6 +15,8 @@ def article_list(request):
 
     if category:
         articles = articles.filter(category__name__iexact=category)
+    else:
+        articles=Article.objects.all()
 
     if query:
         articles = articles.filter(
@@ -22,7 +24,8 @@ def article_list(request):
             Q(content__icontains=query)
         )
 
-    categories = Category.objects.all()
+   # categories = Category.objects.all()
+    categories = Category.objects.annotate(count=Count('article'))
     paginator = Paginator(articles, 5)  # Show 5 articles per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
