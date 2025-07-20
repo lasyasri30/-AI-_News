@@ -18,7 +18,7 @@ class ArticleAdmin(admin.ModelAdmin):
 @admin.register(UserPreference)
 class UserPreferenceAdmin(admin.ModelAdmin):
     list_display = ['user']
-    filter_horizontal = ['preferred_categories']
+    filter_horizontal = ['categories']
 
 @admin.register(ReadingHistory)
 class ReadingHistoryAdmin(admin.ModelAdmin):

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4 text-center" style="color: #40006b;">Select Your Preferences</h2>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow p-4 rounded-4">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <h5 class="mb-3"><strong>{{ form.categories.label }}</strong></h5>
+
+                    {% for checkbox in form.categories %}
+                        <div class="form-check mb-2">
+                            {{ checkbox.tag }} {{ checkbox.choice_label }}
+                        </div>
+                    {% endfor %}
+
+                    
+                    <div class="text-center mt-4">
+    <button type="submit" class="btn save-btn px-4 py-2">
+        Save Preferences
+    </button>
+</div>
+
+<style>
+    .save-btn {
+        border: 2px solid #40006b;
+        color: #40006b;
+        background-color: white;
+        border-radius: 50px; /* pill shape */
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+
+    .save-btn:hover {
+        background-color: #40006b;
+        color: white;
+        box-shadow: 0 0 10px rgba(64, 0, 107, 0.3);
+    }
+</style>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

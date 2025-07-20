@@ -46,3 +46,49 @@ button:hover {
 a {
     color: #6a0dad;
 }
+.btn-purple {
+    background-color: #7b1fa2;
+    color: white;
+    font-weight: 500;
+}
+
+.btn-purple:hover {
+    background-color: #6a1b9a;
+    color: white;
+}
+
+.card-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.card-text {
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.card-footer {
+    font-size: 0.85rem;
+}
+/* Grid layout for article cards */
+.row-cols-md-2 > .col {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Space-saving cards */
+.card {
+    border-radius: 15px;
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: scale(1.01);
+}
+
+.card-footer {
+    font-size: 0.85rem;
+    background-color: #fff;
+}
+
+

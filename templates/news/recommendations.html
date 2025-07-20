@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">🧠 Recommended for You</h2>
+
+    {% if articles %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for article in articles %}
+        <div class="col">
+            <div class="card h-100 shadow rounded-3 border-0">
+                {% if article.image %}
+                    <img src="{{ article.image.url }}" class="card-img-top" alt="Article Image">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ article.title }}</h5>
+                    <p class="card-text">{{ article.summary|truncatewords:25 }}</p>
+                </div>
+                <div class="card-footer bg-white border-top-0 text-muted small">
+                    <span>🗓 {{ article.created_at|date:"M d, Y" }}</span><br>
+                    <span>📁 {{ article.category.name }}</span><br>
+                    <a href="{% url 'article_detail' article.pk %}" class="btn btn-sm btn-outline-primary mt-2">Read More</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info mt-3">
+        No unread recommendations in your preferred categories yet! 🎉
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
