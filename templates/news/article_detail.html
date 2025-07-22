@@ -2,8 +2,14 @@
 {% block content %}
 <div class="container mt-4">
     <h2>{{ article.title }}</h2>
+
+    <!-- ✅ Source attribution -->
+    <p class="text-muted">
+        By {{ article.author }} from {{ article.source }} on {{ article.published_date|date:"F d, Y" }}
+    </p>
+
     <p><strong>Category:</strong> {{ article.category.name }}</p>
-    <p><strong>Published:</strong> {{ article.published_date }}</p>
+
     <hr>
     <p>{{ article.content }}</p>
 
@@ -19,3 +25,4 @@
     <a href="{% url 'article_list' %}" class="btn btn-sm btn-link">← Back to Articles</a>
 </div>
 {% endblock %}
+
