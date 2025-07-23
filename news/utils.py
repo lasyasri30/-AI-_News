@@ -82,3 +82,20 @@ def fetch_news_from_rss(feed_url, source_name):
     except Exception as e:
         print(f"An error occurred during RSS parsing for {source_name}: {e}")
         return []
+# text_summ
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
+
+def generate_summary(text, num_sentences=3):
+    """
+    Generates a summary of the given text using the LSA algorithm.
+    """
+    try:
+        parser = PlaintextParser.from_string(text, Tokenizer("english"))
+        summarizer = LsaSummarizer()
+        summary = summarizer(parser.document, num_sentences)
+        return ' '.join(str(sentence) for sentence in summary)
+    except Exception as e:
+        print(f"Summary generation failed: {e}")
+        return "Summary not available."

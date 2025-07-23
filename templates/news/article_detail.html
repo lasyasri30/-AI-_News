@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+
 {% block content %}
 <div class="container mt-4">
     <h2>{{ article.title }}</h2>
@@ -13,6 +14,14 @@
     <hr>
     <p>{{ article.content }}</p>
 
+    <!-- ✅ Summary Display (if available) -->
+    {% if article.summary %}
+        <hr>
+        <h4>📝 Summary</h4>
+        <p>{{ article.summary }}</p>
+    {% endif %}
+
+    <!-- ✅ Audio Section (if available) -->
     {% if article.audio_file %}
         <hr>
         <audio controls>
@@ -21,8 +30,16 @@
         </audio>
     {% endif %}
 
+    <!-- ✅ Generate Summary Button (for logged-in users) -->
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'generate_summary' article.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary mt-3">🧠 Generate Summary</button>
+        </form>
+    {% endif %}
+
+    <!-- ✅ Navigation Buttons -->
     <a href="{{ article.source_url }}" target="_blank" class="btn btn-sm btn-secondary mt-3">🔗 Source</a>
     <a href="{% url 'article_list' %}" class="btn btn-sm btn-link">← Back to Articles</a>
 </div>
 {% endblock %}
-

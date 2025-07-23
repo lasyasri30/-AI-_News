@@ -5,24 +5,20 @@ from django.db.models import Q, Count
 from django.contrib.auth.decorators import login_required
 from .models import Article, Category, UserPreference, ReadingHistory
 from .forms import PreferenceForm
+from django.contrib import messages
+from .utils import generate_summary  # 🧠 Import summarizer function
 
 def home(request):
     return HttpResponse("🎉 Welcome to ByteNews Homepage!")
 
 def article_list(request):
     category = request.GET.get('category', '')
-
-    # Start with all articles
     articles = Article.objects.all()
 
-    # Apply category filter (if selected)
     if category:
         articles = articles.filter(category__name__iexact=category)
 
-    # Annotate categories with article count
     categories = Category.objects.annotate(count=Count('article'))
-
-    # Paginate (6 articles per page)
     paginator = Paginator(articles, 6)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -42,7 +38,9 @@ def article_detail(request, article_id):
     if request.user.is_authenticated:
         ReadingHistory.objects.get_or_create(user=request.user, article=article)
 
-    return render(request, 'news/article_detail.html', {'article': article})
+    return render(request, 'news/article_detail.html', {
+        'article': article
+    })
 
 @login_required
 def select_preferences(request):
@@ -84,3 +82,17 @@ def recommendations(request):
         articles = Article.objects.none()
 
     return render(request, 'news/recommendations.html', {'articles': articles})
+
+# ✅ NEW VIEW — Generate Summary on-demand
+@login_required
+def generate_summary_view(request, article_id):
+    if request.method == 'POST':
+        article = get_object_or_404(Article, id=article_id)
+        try:
+            summary = generate_summary(article.content)
+            article.summary = summary
+            article.save()
+            messages.success(request, "Summary generated successfully!")
+        except Exception as e:
+            messages.error(request, f"Error generating summary: {e}")
+    return redirect('article_detail', article_id=article_id)

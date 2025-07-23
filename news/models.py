@@ -18,7 +18,7 @@ class Category(models.Model):
 class Article(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
-    summary = models.TextField(blank=True)
+    summary = models.TextField(blank=True, null=True)
     source_url = models.URLField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     published_date = models.DateTimeField(default=timezone.now)
