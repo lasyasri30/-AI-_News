@@ -1,13 +1,36 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <h2>Login</h2>
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 90vh;">
+    <div class="w-100" style="max-width: 700px;">
+        <!-- 🔒 Bold, Left-aligned Heading -->
+        <h2 class="fw-bold" style="color: #2e003e; margin-bottom: 30px;">Login</h2>
 
-  <form method="post" class="auth-form">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Login</button>
-  </form>
+        <!-- 🔳 Login Card -->
+        <div class="card shadow" style="padding: 30px; border-radius: 12px;">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="id_username" class="form-label">Username:</label>
+                    <input type="text" name="username" id="id_username" class="form-control form-control-lg" required>
+                </div>
 
-  <p>Don't have an account? <a href="{% url 'register' %}">Register here</a>.</p>
+                <div class="mb-4">
+                    <label for="id_password" class="form-label">Password:</label>
+                    <input type="password" name="password" id="id_password" class="form-control form-control-lg" required>
+                </div>
+
+                <button type="submit" class="btn btn-purple px-4 py-2">Login</button>
+            </form>
+        </div>
+
+        <!-- 🔗 Register Link -->
+        <p class="mt-3" style="font-size: 1rem;">
+            Don't have an account? <a href="{% url 'register' %}">Register here</a>.
+        </p>
+    </div>
+</div>
+
+
 {% endblock %}

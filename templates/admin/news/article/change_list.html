@@ -1,0 +1,19 @@
+{% extends "admin/change_list.html" %}
+
+{% block content_title %}
+    {{ title }}
+    {% if article_stats %}
+    <div class="mt-3">
+        <strong>📊 Article Stats:</strong>
+        <ul>
+            <li>Total: {{ article_stats.total }}</li>
+            <li>✅ Approved: {{ article_stats.approved }}</li>
+            <li>⏳ Pending: {{ article_stats.pending }}</li>
+        </ul>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+{% endblock %}

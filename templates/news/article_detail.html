@@ -6,22 +6,56 @@
 
     <!-- ✅ Source attribution -->
     <p class="text-muted">
-        By {{ article.author }} from {{ article.source }} on {{ article.published_date|date:"F d, Y" }}
+        {% if article.author %}
+            By {{ article.author }} from {{ article.source }}
+        {% else %}
+            From {{ article.source }}
+        {% endif %}
+        on {{ article.published_date|date:"F d, Y" }}
     </p>
 
     <p><strong>Category:</strong> {{ article.category.name }}</p>
 
+    <!-- ✅ Full Article Content -->
     <hr>
-    <p>{{ article.content }}</p>
+    <h4>📄 Full Article</h4>
+    <p style="white-space: pre-wrap;">{{ article.content }}</p>
 
-    <!-- ✅ Summary Display (if available) -->
+    <!-- ✅ Summary Section -->
     {% if article.summary %}
         <hr>
         <h4>📝 Summary</h4>
-        <p>{{ article.summary }}</p>
+        <p id="summary-text">{{ article.summary }}</p>
+
+        <!-- ✅ Feedback Stats -->
+        {% if feedback_stats.helpful or feedback_stats.not_helpful %}
+        <p class="text-muted">
+            🗳️ Feedback: {{ feedback_stats.helpful|default:"0" }} 👍 &nbsp;
+            {{ feedback_stats.not_helpful|default:"0" }} 👎
+        </p>
+        {% endif %}
+
+        <!-- ✅ Feedback Buttons -->
+        {% if user.is_authenticated %}
+        <div id="feedback-section">
+            {% if existing_feedback %}
+            <p class="text-info">
+                You already gave feedback:
+                {% if existing_feedback.is_helpful %}👍 Helpful{% else %}👎 Not Helpful{% endif %}.
+                You can update it below.
+            </p>
+            {% endif %}
+
+            <small class="text-muted">Was this summary helpful?</small>
+            <button onclick="submitFeedback({{ article.id }}, true)" class="btn btn-sm btn-success me-2">👍 Yes</button>
+            <button onclick="submitFeedback({{ article.id }}, false)" class="btn btn-sm btn-danger">👎 No</button>
+
+            <div id="feedback-message" class="text-success mt-2"></div>
+        </div>
+        {% endif %}
     {% endif %}
 
-    <!-- ✅ Audio Section (if available) -->
+    <!-- ✅ Audio Section -->
     {% if article.audio_file %}
         <hr>
         <audio controls>
@@ -30,16 +64,65 @@
         </audio>
     {% endif %}
 
-    <!-- ✅ Generate Summary Button (for logged-in users) -->
+    <!-- ✅ Regenerate Summary Form with Length Selection -->
     {% if user.is_authenticated %}
-        <form method="post" action="{% url 'generate_summary' article.id %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary mt-3">🧠 Generate Summary</button>
-        </form>
+    <form method="post" action="{% url 'generate_summary' article.id %}" class="mt-4 d-flex align-items-center gap-2">
+        {% csrf_token %}
+        <label for="length" class="form-label mb-0">Select summary length:</label>
+        <select name="num_sentences" id="length" class="form-select form-select-sm w-auto">
+            <option value="2">Short</option>
+            <option value="3" selected>Medium</option>
+            <option value="5">Long</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-warning">🔁 Regenerate Summary</button>
+    </form>
     {% endif %}
 
     <!-- ✅ Navigation Buttons -->
-    <a href="{{ article.source_url }}" target="_blank" class="btn btn-sm btn-secondary mt-3">🔗 Source</a>
+    <a href="{{ article.source_url }}" target="_blank" class="btn btn-sm btn-secondary mt-4">🔗 Source</a>
     <a href="{% url 'article_list' %}" class="btn btn-sm btn-link">← Back to Articles</a>
 </div>
+
+<!-- ✅ AJAX Feedback Script -->
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        for (const cookie of document.cookie.split(';')) {
+            const trimmed = cookie.trim();
+            if (trimmed.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(trimmed.slice(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function submitFeedback(articleId, isHelpful) {
+    const csrftoken = getCookie('csrftoken');
+
+    fetch(`/article/${articleId}/feedback/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `is_helpful=${isHelpful}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        const msgBox = document.getElementById("feedback-message");
+        if (data.status === "success") {
+            msgBox.innerText = data.helpful ? "✅ Thanks! You found it helpful." : "📝 Got it! Thanks for your input.";
+        } else {
+            msgBox.innerText = "❌ Something went wrong.";
+        }
+    })
+    .catch(error => {
+        document.getElementById("feedback-message").innerText = "⚠️ Feedback failed.";
+    });
+}
+</script>
 {% endblock %}

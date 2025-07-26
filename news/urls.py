@@ -7,10 +7,9 @@ urlpatterns = [
     path('recommendations/', views.recommendations, name='recommendations'),
     path('preferences/', views.select_preferences, name='preferences'),
     path('feed/', views.personalized_feed, name='personalized_feed'),
-    #path('generate-summary/<int:article_id>/', views.generate_summary_view, name='generate_summary_view'),
+    path('article/<int:article_id>/regenerate_summary/', views.generate_summary_view, name='generate_summary'),
+    path('article/<int:pk>/feedback/', views.submit_summary_feedback, name='submit_summary_feedback'),
+    path('history/', views.reading_history, name='reading_history'),
+    path('history/clear/', views.clear_history, name='clear_history'),
 
-    path('generate-summary/<int:article_id>/', views.generate_summary_view, name='generate_summary'),
-
-    # Optional: Uncomment this if you have a home view
-    # path('', views.home, name='home'),
 ]

@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+
+{% block content_title %}
+  {{ block.super }}
+  <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff;">
+    <strong>📊 Article Statistics:</strong>
+    <ul style="margin-top: 5px;">
+      <li>Total: {{ article_stats.total }}</li>
+      <li>Approved: {{ article_stats.approved }}</li>
+      <li>Pending: {{ article_stats.pending }}</li>
+    </ul>
+  </div>
+{% endblock %}
