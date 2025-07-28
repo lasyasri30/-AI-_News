@@ -70,9 +70,10 @@
         {% csrf_token %}
         <label for="length" class="form-label mb-0">Select summary length:</label>
         <select name="num_sentences" id="length" class="form-select form-select-sm w-auto">
-            <option value="2">Short</option>
-            <option value="3" selected>Medium</option>
-            <option value="5">Long</option>
+             <option value="2" {% if request.POST.num_sentences == '2' %}selected{% endif %}>Short</option>
+             <option value="3" {% if request.POST.num_sentences == '3' or not request.POST.num_sentences %}selected{% endif %}>Medium</option>
+             <option value="5" {% if request.POST.num_sentences == '5' %}selected{% endif %}>Long</option>
+</select>
         </select>
         <button type="submit" class="btn btn-sm btn-warning">🔁 Regenerate Summary</button>
     </form>

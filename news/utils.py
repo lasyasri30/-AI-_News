@@ -1,5 +1,9 @@
 import feedparser
 import requests
+import os
+import logging
+from gtts import gTTS
+from django.conf import settings
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from django.utils import timezone as dj_timezone
@@ -12,12 +16,13 @@ from collections import Counter
 nltk.download('punkt')
 nltk.download('stopwords')
 
+logger = logging.getLogger(__name__)
+
 def clean_html(raw_html):
     if not raw_html:
         return ""
     soup = BeautifulSoup(raw_html, 'html.parser')
     return soup.get_text(separator=' ', strip=True)
-
 
 def guess_category(title, content):
     categories = {
@@ -32,80 +37,48 @@ def guess_category(title, content):
         "Science": ["science", "space", "nasa", "experiment", "research", "climate", "environment"]
     }
 
-    # Combine title and content into one searchable string
     text = f"{title} {content}".lower()
-
-    # Ordered check for categories to control priority
-    for cat in [
-        "Lifestyle", "Health", "Technology", "Education",
-        "Politics", "Business", "Entertainment", "Sports", "Science"
-    ]:
-        keywords = categories[cat]
-        if any(kw.lower() in text for kw in keywords):
-            print(f"🧠 Assigned category: {cat} for title: {title}")
+    for cat in categories:
+        if any(kw.lower() in text for kw in categories[cat]):
             return cat
-
-    print(f"🧠 Defaulted to General for: {title}")
     return "General"
-
-
-
 
 def fetch_news_from_rss(feed_url, source_name):
     articles_data = []
 
     try:
-        response = requests.get(
-            feed_url,
-            headers={'User-Agent': 'ByteNewsScraper/1.0'},
-            timeout=10
-        )
+        response = requests.get(feed_url, headers={'User-Agent': 'ByteNewsScraper/1.0'}, timeout=10)
         response.raise_for_status()
         feed = feedparser.parse(response.content)
 
         for entry in feed.entries:
             title = entry.get('title', 'No title')
             link = entry.get('link')
-            raw_content = ""
+            cleaned_content = ""
 
-            # Prefer content, fallback to summary or description
-            if 'content' in entry and entry['content']:
-                raw_content = entry['content'][0].get('value', '')
-            elif 'summary' in entry:
-                raw_content = entry['summary']
-            elif 'description' in entry:
-                raw_content = entry['description']
+            # ✅ Always try full article first using newspaper3k
+            try:
+                article = NewsArticle(link)
+                article.download()
+                article.parse()
+                cleaned_content = clean_html(article.text)
 
-            cleaned_content = clean_html(raw_content)
+                # 🔁 Fallback if short
+                if len(cleaned_content.strip()) < 300:
+                    print(f"⚠️ newspaper3k short for: {title}, trying fallback...")
+                    fallback_response = requests.get(link, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+                    soup = BeautifulSoup(fallback_response.content, 'html.parser')
+                    paragraphs = soup.find_all('p')
+                    fallback_text = " ".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+                    if len(fallback_text.strip()) > 300:
+                        cleaned_content = fallback_text
+            except Exception as e:
+                print(f"❌ Failed to fetch full content for {title}: {e}")
+                cleaned_content = "No content available."
 
-            # If content is too short, try fetching full article
-            if (not cleaned_content or len(cleaned_content.strip()) < 100) and 'cnn-underscored' not in link and '/videos/' not in link:
-                try:
-                    news_article = NewsArticle(link)
-                    news_article.download()
-                    news_article.parse()
-                    cleaned_content = clean_html(news_article.text)
-
-                    # Fallback: If still too short, try BeautifulSoup scraping
-                    if len(cleaned_content.strip()) < 100:
-                        print(f"⚠️ Newspaper3k content too short for: {title}. Trying fallback scraping...")
-                        try:
-                            fallback_response = requests.get(link, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
-                            soup = BeautifulSoup(fallback_response.content, 'html.parser')
-                            paragraphs = soup.find_all('p')
-                            fallback_text = " ".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
-                            if len(fallback_text.strip()) > 100:
-                                cleaned_content = fallback_text
-                        except Exception as fallback_error:
-                            print(f"🛑 Fallback scraping also failed: {fallback_error}")
-                except Exception as e:
-                    print(f"🛑 Failed to fetch full content for {title}: {e}")
-
-            # Final content check
             if not cleaned_content or cleaned_content.strip() == "":
                 cleaned_content = "No content available."
 
-            # Summary and publication date
             raw_summary = entry.get('summary', '')
             cleaned_summary = clean_html(raw_summary) or "No summary available."
 
@@ -128,16 +101,16 @@ def fetch_news_from_rss(feed_url, source_name):
 
         return articles_data
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching RSS feed from {source_name}: {e}")
-        return []
     except Exception as e:
-        print(f"An error occurred during RSS parsing for {source_name}: {e}")
+        print(f"❌ Error fetching RSS feed from {source_name}: {e}")
         return []
 
-def generate_summary(text, article_title="", num_sentences=3):
+def generate_summary(text, article_title="", length='medium', num_sentences=None):
     if not text or not isinstance(text, str):
         return "No content available to summarize."
+
+    length_map = {'short': 2, 'medium': 3, 'long': 5}
+    num_sentences = num_sentences or length_map.get(length, 3)
 
     sentences = sent_tokenize(text)
     if len(sentences) <= num_sentences:
@@ -161,12 +134,30 @@ def generate_summary(text, article_title="", num_sentences=3):
                 sentence_scores[i] = sentence_scores.get(i, 0) + word_frequencies[word]
 
         if i == 0:
-            sentence_scores[i] = sentence_scores.get(i, 0) + 1.0
+            sentence_scores[i] += 1.0
         elif i == 1:
-            sentence_scores[i] = sentence_scores.get(i, 0) + 0.5
+            sentence_scores[i] += 0.5
 
-    top_indices = sorted(
-        sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:num_sentences]
-    )
-    summary = " ".join(sentences[i] for i, _ in top_indices)
+    top_indices = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:num_sentences]
+    selected_sentences = sorted([i for i, _ in top_indices])
+    summary = " ".join(sentences[i] for i in selected_sentences)
     return summary
+
+def generate_audio_summary(text, article_id):
+    if not text:
+        logger.warning(f"No text for audio: article_id {article_id}")
+        return None
+
+    filename = f"summary_{article_id}.mp3"
+    audio_dir = os.path.join(settings.MEDIA_ROOT, 'news_audio')
+    os.makedirs(audio_dir, exist_ok=True)
+    filepath = os.path.join(audio_dir, filename)
+
+    try:
+        tts = gTTS(text=text, lang='en')
+        tts.save(filepath)
+        logger.info(f"🎧 Audio saved at {filepath}")
+        return os.path.join(settings.MEDIA_URL, 'news_audio', filename)
+    except Exception as e:
+        logger.error(f"❌ Error generating audio: {e}")
+        return None

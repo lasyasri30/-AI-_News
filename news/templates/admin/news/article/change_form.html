@@ -1,0 +1,57 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block object-tools %}
+    {{ block.super }}
+    {% if change and original %}
+        <li>
+            <a class="button"
+               href="{% url 'admin:regenerate-audio' original.id %}">
+                🔊 Regenerate Audio
+            </a>
+        </li>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    {% if original %}
+        <div class="inline-group mt-4" style="margin-top: 30px;">
+            <fieldset class="module aligned">
+                <legend><strong>📝 Article Preview</strong></legend>
+
+                <div class="form-row">
+                    <label><strong>Title:</strong></label>
+                    <div>{{ original.title }}</div>
+                </div>
+
+                <div class="form-row">
+                    <label><strong>Content:</strong></label>
+                    <div style="max-height: 200px; overflow: auto; border: 1px solid #ccc; padding: 10px; white-space: pre-line;">
+                        {{ original.content|safe }}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label><strong>Summary:</strong></label>
+                    <div style="max-height: 150px; overflow: auto; border: 1px solid #ccc; padding: 10px; white-space: pre-line;">
+                        {{ original.summary|safe }}
+                    </div>
+                </div>
+
+                {% if original.audio_file %}
+                <div class="form-row">
+                    <label><strong>Audio Summary:</strong></label>
+                    <div>
+                        <audio controls>
+                            <source src="{{ original.audio_file.url }}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                </div>
+                {% endif %}
+            </fieldset>
+        </div>
+    {% endif %}
+{% endblock %}

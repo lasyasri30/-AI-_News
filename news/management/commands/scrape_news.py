@@ -1,9 +1,13 @@
 # news/management/commands/scrape_news.py
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from news.utils import fetch_news_from_rss
+from news.utils import fetch_news_from_rss, generate_summary, generate_audio_summary
 from news.models import Article, Category
+from django.conf import settings
 import logging
+import os
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -35,24 +39,44 @@ class Command(BaseCommand):
 
             for article_data in articles_data:
                 try:
-                    # Get or create category based on guessed_category
+                    # Get or create category
                     category_name = article_data.get('guessed_category', 'General')
                     category_obj, _ = Category.objects.get_or_create(name=category_name)
 
-                    # Avoid duplicates using link
+                    # Check for duplicates using the link
                     if not Article.objects.filter(link=article_data['link']).exists():
-                        Article.objects.create(
+                        # Generate summary
+                        article_summary = article_data.get('summary')
+                        if not article_summary:
+                            article_summary = generate_summary(
+                                article_data['content'],
+                                article_data['title'],
+                                length='medium'  # ✅ NEW: choose summary length
+                            )
+
+                        # First save the article (without audio)
+                        article = Article.objects.create(
                             title=article_data['title'],
                             content=article_data['content'],
-                            summary=article_data['summary'],
+                            summary=article_summary,
                             published_date=article_data.get('publication_date') or timezone.now(),
                             source=article_data.get('source', 'Unknown'),
                             link=article_data['link'],
                             source_url=article_data['link'],
-                            category=category_obj
+                            category=category_obj,
+                            approved=False  # new articles start as pending
                         )
+
+                        # Now generate audio
+                        audio_url = generate_audio_summary(article_summary, article.id)
+                        if audio_url:
+                            relative_path = os.path.relpath(audio_url, settings.MEDIA_URL)
+                            article.audio_file.name = relative_path
+                            article.save()
+
                         articles_added_from_source += 1
-                        self.stdout.write(f"   ✅ Saved: {article_data['title'][:60]}... [{category_name}]")
+                        self.stdout.write(f"   ✅ Saved: {article.title[:60]}... [{category_name}]")
+
                     else:
                         logger.info(f"Skipping duplicate: {article_data['title']}")
 
