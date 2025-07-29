@@ -8,13 +8,15 @@ from django.views.decorators.http import require_POST
 
 from .models import Article, Category, UserPreference, ReadingHistory, SummaryFeedback
 from .forms import PreferenceForm
-from .utils import generate_summary
+from .utils import generate_summary, generate_audio_summary
+from django.conf import settings
+import traceback  # For better error logging
 
-# ✅ 1. Homepage — You can improve this later by adding top stories or featured articles
+# ✅ 1. Homepage
 def home(request):
     return HttpResponse("🎉 Welcome to ByteNews Homepage!")
 
-# ✅ 2. Article List View — only approved
+# ✅ 2. Article List View
 def article_list(request):
     category = request.GET.get('category', '')
     search_query = request.GET.get('search', '')
@@ -37,7 +39,7 @@ def article_list(request):
         'is_paginated': page_obj.has_other_pages()
     })
 
-# ✅ 3. Article Detail — only approved unless staff
+# ✅ 3. Article Detail
 def article_detail(request, article_id):
     if request.user.is_staff:
         article = get_object_or_404(Article, id=article_id)
@@ -65,7 +67,7 @@ def select_preferences(request):
 
     return render(request, 'news/preferences.html', {'form': form})
 
-# ✅ 5. Personalized Feed — only approved
+# ✅ 5. Personalized Feed
 @login_required
 def personalized_feed(request):
     try:
@@ -83,7 +85,7 @@ def personalized_feed(request):
         'page_obj': page_obj
     })
 
-# ✅ 6. Recommendations — only approved
+# ✅ 6. Recommendations
 @login_required
 def recommendations(request):
     read_ids = ReadingHistory.objects.filter(user=request.user).values_list('article_id', flat=True)
@@ -104,13 +106,14 @@ def generate_summary_view(request, article_id):
             num_sentences = int(request.POST.get('num_sentences', 3))
             summary = generate_summary(article.content, article_title=article.title, num_sentences=num_sentences)
             article.summary = summary
+            article.audio_file = None  # ✅ Clear old audio if summary is changed
             article.save()
-            messages.success(request, "✅ Summary generated successfully!")
+            messages.success(request, "✅ Summary generated successfully! You can now generate the updated audio.")
         except Exception as e:
             messages.error(request, f"❌ Error generating summary: {e}")
     return redirect('article_detail', article_id=article_id)
 
-# ✅ 8. Summary Feedback
+# ✅ 8. Submit Summary Feedback
 @login_required
 @require_POST
 def submit_summary_feedback(request, pk):
@@ -140,13 +143,9 @@ def submit_summary_feedback(request, pk):
 # ✅ 9. Reading History
 @login_required
 def reading_history(request):
-    history_entries = (
-        ReadingHistory.objects
-        .filter(user=request.user)
-        .select_related('article')
-        .order_by('-read_at')
-    )
+    history_entries = ReadingHistory.objects.filter(user=request.user).select_related('article').order_by('-read_at')
     articles = [entry.article for entry in history_entries]
+
     paginator = Paginator(articles, 6)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -154,7 +153,7 @@ def reading_history(request):
     return render(request, 'news/reading_history.html', {
         'articles': page_obj,
         'page_obj': page_obj,
-        'is_paginated': page_obj.has_other_pages(),
+        'is_paginated': page_obj.has_other_pages()
     })
 
 # ✅ 10. Clear History
@@ -163,3 +162,28 @@ def clear_history(request):
     ReadingHistory.objects.filter(user=request.user).delete()
     messages.success(request, "✅ Reading history cleared.")
     return redirect('reading_history')
+
+# ✅ 11. Generate Audio (AJAX)
+@login_required
+@require_POST
+def generate_audio_ajax(request, pk):
+    article = get_object_or_404(Article, pk=pk)
+
+    if not article.summary:
+        article.summary = generate_summary(article.content, article.title)
+        article.save()
+
+    if not article.summary or article.summary.strip() in ["", "No summary available."]:
+        return JsonResponse({'status': 'error', 'message': 'No valid summary to convert to audio'}, status=400)
+
+    try:
+        audio_url = generate_audio_summary(article.summary, article.id)
+        if audio_url:
+            article.audio_file.name = audio_url.replace(settings.MEDIA_URL, '', 1)
+            article.save()
+            return JsonResponse({'status': 'success', 'audio_url': audio_url})
+        else:
+            raise Exception("generate_audio_summary returned None")
+    except Exception as e:
+        print("❌ View failed:\n", traceback.format_exc())
+        return JsonResponse({'status': 'error', 'message': 'Failed to generate audio'}, status=500)

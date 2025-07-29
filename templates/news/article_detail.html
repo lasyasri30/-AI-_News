@@ -27,9 +27,29 @@
         <h4>📝 Summary</h4>
         <p id="summary-text">{{ article.summary }}</p>
 
+        <!-- ✅ Audio Section -->
+        <div id="audioPlayerContainer" class="mt-3">
+            {% if article.audio_file %}
+                <audio id="audioPlayer" controls>
+                    <source src="{{ article.audio_file.url }}" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            {% else %}
+                <p id="audioStatus">Audio summary not yet generated.</p>
+                {% if user.is_authenticated %}
+                    <button id="generateAudioBtn" class="btn btn-primary btn-sm mt-2" data-article-id="{{ article.pk }}">
+                        🎤 Generate Audio Summary
+                    </button>
+                {% endif %}
+            {% endif %}
+            <div id="loadingSpinner" class="spinner-border text-primary" role="status" style="display: none;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
         <!-- ✅ Feedback Stats -->
         {% if feedback_stats.helpful or feedback_stats.not_helpful %}
-        <p class="text-muted">
+        <p class="text-muted mt-3">
             🗳️ Feedback: {{ feedback_stats.helpful|default:"0" }} 👍 &nbsp;
             {{ feedback_stats.not_helpful|default:"0" }} 👎
         </p>
@@ -55,16 +75,7 @@
         {% endif %}
     {% endif %}
 
-    <!-- ✅ Audio Section -->
-    {% if article.audio_file %}
-        <hr>
-        <audio controls>
-            <source src="{{ article.audio_file.url }}" type="audio/mpeg">
-            Your browser does not support the audio element.
-        </audio>
-    {% endif %}
-
-    <!-- ✅ Regenerate Summary Form with Length Selection -->
+    <!-- ✅ Regenerate Summary Form -->
     {% if user.is_authenticated %}
     <form method="post" action="{% url 'generate_summary' article.id %}" class="mt-4 d-flex align-items-center gap-2">
         {% csrf_token %}
@@ -73,7 +84,6 @@
              <option value="2" {% if request.POST.num_sentences == '2' %}selected{% endif %}>Short</option>
              <option value="3" {% if request.POST.num_sentences == '3' or not request.POST.num_sentences %}selected{% endif %}>Medium</option>
              <option value="5" {% if request.POST.num_sentences == '5' %}selected{% endif %}>Long</option>
-</select>
         </select>
         <button type="submit" class="btn btn-sm btn-warning">🔁 Regenerate Summary</button>
     </form>
@@ -84,7 +94,7 @@
     <a href="{% url 'article_list' %}" class="btn btn-sm btn-link">← Back to Articles</a>
 </div>
 
-<!-- ✅ AJAX Feedback Script -->
+<!-- ✅ AJAX Feedback Script (existing) -->
 <script>
 function getCookie(name) {
     let cookieValue = null;
@@ -125,5 +135,62 @@ function submitFeedback(articleId, isHelpful) {
         document.getElementById("feedback-message").innerText = "⚠️ Feedback failed.";
     });
 }
+
+// ✅ Audio Generation AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const generateAudioBtn = document.getElementById('generateAudioBtn');
+    const audioPlayerContainer = document.getElementById('audioPlayerContainer');
+    const audioStatus = document.getElementById('audioStatus');
+    const csrfToken = getCookie('csrftoken');
+
+    if (generateAudioBtn) {
+        generateAudioBtn.addEventListener('click', function() {
+            const articleId = this.dataset.articleId;
+            generateAudioBtn.disabled = true;
+            document.getElementById('loadingSpinner').style.display = 'block';
+            audioStatus.textContent = 'Generating audio... Please wait.';
+
+            fetch(`/article/${articleId}/generate_audio_ajax/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    audioStatus.textContent = 'Audio summary ready!';
+                    const newAudio = document.createElement('audio');
+                    newAudio.id = 'audioPlayer';
+                    newAudio.controls = true;
+
+                    const source = document.createElement('source');
+                    source.src = data.audio_url + '?t=' + new Date().getTime();
+                    source.type = 'audio/mpeg';
+                    newAudio.appendChild(source);
+
+                    audioPlayerContainer.innerHTML = '';
+                    audioPlayerContainer.appendChild(newAudio);
+
+                    newAudio.load();
+                    newAudio.play();
+                } else {
+                    audioStatus.textContent = `Error: ${data.message}`;
+                    generateAudioBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                audioStatus.textContent = 'Failed to generate audio.';
+                generateAudioBtn.disabled = false;
+                document.getElementById('loadingSpinner').style.display = 'none';
+            });
+        });
+    }
+});
 </script>
 {% endblock %}
