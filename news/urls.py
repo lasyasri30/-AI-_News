@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from django.contrib import admin
+from django.urls import path, include
+
 
 urlpatterns = [
     path('article/', views.article_list, name='article_list'),
@@ -12,4 +15,5 @@ urlpatterns = [
     path('article/<int:pk>/generate_audio_ajax/', views.generate_audio_ajax, name='generate_audio_ajax'),  # ✅ New AJAX URL
     path('history/', views.reading_history, name='reading_history'),
     path('history/clear/', views.clear_history, name='clear_history'),
+
 ]

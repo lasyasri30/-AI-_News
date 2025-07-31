@@ -11,6 +11,13 @@ from .forms import PreferenceForm
 from .utils import generate_summary, generate_audio_summary
 from django.conf import settings
 import traceback  # For better error logging
+from rest_framework import viewsets
+from .serializers import ArticleSerializer, UserPreferenceSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
 
 # ✅ 1. Homepage
 def home(request):
@@ -187,3 +194,43 @@ def generate_audio_ajax(request, pk):
     except Exception as e:
         print("❌ View failed:\n", traceback.format_exc())
         return JsonResponse({'status': 'error', 'message': 'Failed to generate audio'}, status=500)
+
+class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Article.objects.filter(approved=True).order_by('-published_date')
+    serializer_class = ArticleSerializer
+
+class UserPreferenceViewSet(viewsets.ModelViewSet):
+    queryset = UserPreference.objects.none()  # ✅ added to satisfy DRF
+    serializer_class = UserPreferenceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return UserPreference.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class GenerateAudioAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, format=None):
+        article = get_object_or_404(Article, pk=pk)
+
+        if not article.summary:
+            article.summary = generate_summary(article.content, article.title)
+            article.save()
+
+            if not article.summary:
+                return Response({'detail': 'Could not generate summary for article.'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        audio_url = generate_audio_summary(article.summary, article.id)
+
+        if audio_url:
+            article.audio_file.name = audio_url.replace(settings.MEDIA_URL, '', 1)
+            article.save()
+            return Response({'audio_url': audio_url}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Failed to generate audio summary.'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
