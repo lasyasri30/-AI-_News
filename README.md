@@ -4,6 +4,7 @@ A simple and user-friendly news browsing web application built using Python, Dja
 ByteNews allows users to choose their favorite news categories and receive personalized news based on their interests and reading history.
 The goal of this project is to provide a clean, fast, and customized news experience.
 
+ ---
 ## 📌Features
 
 -Personalized news feed based on user-selected categories
@@ -16,3 +17,4 @@ The goal of this project is to provide a clean, fast, and customized news experi
 -Articles
 -User details
 -Easy navigation and simple design suitable for all users
+ ---
