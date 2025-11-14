@@ -5,16 +5,17 @@ ByteNews allows users to choose their favorite news categories and receive perso
 The goal of this project is to provide a clean, fast, and customized news experience.
 
  ---
+ 
 ## 📌Features
-
--Personalized news feed based on user-selected categories
--Articles filtered using user reading history (no repeated news)
--Search news by keywords
--Category-based filtering for easier browsing
--Responsive UI using Bootstrap
--Built-in Django admin panel to manage:
--News categories
--Articles
--User details
--Easy navigation and simple design suitable for all users
+- Personalized news feed based on user-selected categories
+- Articles filtered using user reading history (no repeated news)
+- Search news by keywords
+- Category-based filtering for easier browsing
+- Responsive UI using Bootstrap
+- Built-in Django admin panel to manage:
+- News categories
+- Articles
+- User details
+- Easy navigation and simple design suitable for all users
+  
  ---
